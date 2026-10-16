@@ -75,7 +75,7 @@ export const TalkToUdForum: React.FC<TalkToUdForumProps> = ({ onBackToMatch }) =
   const disqusConfig = {
     url: canonicalUrl,
     identifier: threadIdentifier,
-    title: 'PokéLook – Talk to UD Community Discussion',
+    title: 'PokéLook – Talk to Us Community Discussion',
     language: 'en',
     onReady: () => {
       setLoadStatus('ready');
@@ -92,7 +92,7 @@ export const TalkToUdForum: React.FC<TalkToUdForumProps> = ({ onBackToMatch }) =
         </div>
 
         <h1 className="text-3xl sm:text-4xl font-extrabold text-white font-display tracking-tight mb-3">
-          Talk to UD
+          Talk to Us
         </h1>
 
         <p className="text-sm sm:text-base text-slate-300 leading-relaxed mb-4">
@@ -108,7 +108,7 @@ export const TalkToUdForum: React.FC<TalkToUdForumProps> = ({ onBackToMatch }) =
             config={{
               url: canonicalUrl,
               identifier: threadIdentifier,
-              title: 'PokéLook – Talk to UD Community Discussion'
+              title: 'PokéLook – Talk to Us Community Discussion'
             }}
           >
             Comments
@@ -144,7 +144,7 @@ export const TalkToUdForum: React.FC<TalkToUdForumProps> = ({ onBackToMatch }) =
             <span>Feedback & Support</span>
           </div>
           <p className="text-xs text-slate-400 leading-relaxed">
-            Have questions or issues with photo matching? Leave a note and talk to UD directly.
+            Have questions or issues with photo matching? Leave a note and talk to us directly.
           </p>
         </div>
       </div>

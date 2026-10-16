@@ -100,7 +100,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-red-600 selection:text-white">
-      {/* 3-Zone Top Navigation with Talk to UD Tab */}
+      {/* 3-Zone Top Navigation with Talk to Us Tab */}
       <Header
         onReset={handleReset}
         showReset={Boolean(matchResult || currentImage)}
@@ -110,7 +110,7 @@ export default function App() {
 
       {/* Main App Content */}
       <main className="flex-1 flex flex-col justify-start">
-        {/* Talk to UD Forum Tab - preserved once mounted to prevent Disqus script unmount/remount tearing */}
+        {/* Talk to Us Forum Tab - preserved once mounted to prevent Disqus script unmount/remount tearing */}
         {hasOpenedForum && (
           <div className={activeTab === 'talk-to-ud' ? 'block' : 'hidden'}>
             <TalkToUdForum onBackToMatch={() => handleTabChange('match')} />

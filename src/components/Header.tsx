@@ -37,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Zone 2: Navigation Tabs & Links */}
         <nav className="flex items-center gap-2 sm:gap-6 text-sm font-medium">
-          {/* Segmented Primary Tabs: Match & Talk to UD */}
+          {/* Segmented Primary Tabs: Match & Talk to Us */}
           <div className="flex items-center bg-slate-800/90 p-1 rounded-xl border border-slate-700/80">
             <button
               onClick={() => onTabChange('match')}
@@ -59,7 +59,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <MessageSquare className="w-3.5 h-3.5" />
-              <span>Talk to UD</span>
+              <span>Talk to Us</span>
             </button>
           </div>
 
