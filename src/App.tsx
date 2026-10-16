@@ -18,12 +18,21 @@ import { matchPokemon, fetchPokemonInfo, PokemonMatchResult, PokemonApiData } fr
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'match' | 'talk-to-ud'>('match');
+  const [hasOpenedForum, setHasOpenedForum] = useState(false);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
   const [currentMimeType, setCurrentMimeType] = useState<string>('image/jpeg');
   const [isLoading, setIsLoading] = useState(false);
   const [matchResult, setMatchResult] = useState<PokemonMatchResult | null>(null);
   const [pokemonData, setPokemonData] = useState<PokemonApiData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleTabChange = (tab: 'match' | 'talk-to-ud') => {
+    setActiveTab(tab);
+    if (tab === 'talk-to-ud') {
+      setHasOpenedForum(true);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleStartMatching = async (imageDataUrl: string, mimeType: string) => {
     setIsLoading(true);
@@ -96,41 +105,46 @@ export default function App() {
         onReset={handleReset}
         showReset={Boolean(matchResult || currentImage)}
         activeTab={activeTab}
-        onTabChange={(tab) => {
-          setActiveTab(tab);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
+        onTabChange={handleTabChange}
       />
 
       {/* Main App Content */}
       <main className="flex-1 flex flex-col justify-start">
-        {activeTab === 'talk-to-ud' ? (
-          <TalkToUdForum onBackToMatch={() => setActiveTab('match')} />
-        ) : isLoading ? (
-          <div className="my-auto py-12">
-            <LoadingState />
-          </div>
-        ) : matchResult && pokemonData ? (
-          <div className="py-8">
-            <ResultsView
-              matchResult={matchResult}
-              pokemonData={pokemonData}
-              userPhotoUrl={currentImage}
-              onTryAgain={handleReset}
-              onSelectAlternative={handleSelectAlternative}
-            />
-          </div>
-        ) : (
-          <div className="space-y-6 pb-12">
-            <Hero />
-            <PhotoUploader
-              onStartMatching={handleStartMatching}
-              isLoading={isLoading}
-            />
-            <HowItWorks />
-            <PrivacySection />
+        {/* Talk to UD Forum Tab - preserved once mounted to prevent Disqus script unmount/remount tearing */}
+        {hasOpenedForum && (
+          <div className={activeTab === 'talk-to-ud' ? 'block' : 'hidden'}>
+            <TalkToUdForum onBackToMatch={() => handleTabChange('match')} />
           </div>
         )}
+
+        {/* Pokémon Matcher Tab */}
+        <div className={activeTab === 'match' ? 'block' : 'hidden'}>
+          {isLoading ? (
+            <div className="my-auto py-12">
+              <LoadingState />
+            </div>
+          ) : matchResult && pokemonData ? (
+            <div className="py-8">
+              <ResultsView
+                matchResult={matchResult}
+                pokemonData={pokemonData}
+                userPhotoUrl={currentImage}
+                onTryAgain={handleReset}
+                onSelectAlternative={handleSelectAlternative}
+              />
+            </div>
+          ) : (
+            <div className="space-y-6 pb-12">
+              <Hero />
+              <PhotoUploader
+                onStartMatching={handleStartMatching}
+                isLoading={isLoading}
+              />
+              <HowItWorks />
+              <PrivacySection />
+            </div>
+          )}
+        </div>
       </main>
 
       {/* Attribution & Legal Notice */}
