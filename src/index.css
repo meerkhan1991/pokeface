@@ -16,10 +16,41 @@ html {
 
 body {
   font-family: var(--font-sans);
-  background-color: #0f172a;
+  background-color: #020617;
   color: #f8fafc;
 }
 
 h1, h2, h3, .font-display {
   font-family: var(--font-display);
+}
+
+/* ==========================================================================
+   Disqus Color Isolation
+   Disqus embed.js parseColor() only supports standard HEX/RGB and throws
+   when encountering Tailwind v4's modern OKLCH color strings.
+   We explicitly override computed colors on Disqus containers and elements.
+   ========================================================================== */
+#disqus_thread {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  min-height: 360px;
+}
+
+.disqus-container {
+  background-color: #0b1120 !important;
+  color: #f8fafc !important;
+}
+
+.disqus-container *,
+#disqus_thread * {
+  color: #f8fafc !important;
+}
+
+#disqus_thread a,
+.disqus-container a {
+  color: #ef4444 !important;
+}
+
+#disqus_thread iframe {
+  color-scheme: dark !important;
 }

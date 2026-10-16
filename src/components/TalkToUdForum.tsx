@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { DiscussionEmbed, CommentCount } from 'disqus-react';
 import { MessageSquare, Sparkles, Users, HelpCircle, AlertCircle, ExternalLink, RefreshCw } from 'lucide-react';
+import { DisqusErrorBoundary } from './DisqusErrorBoundary';
 
 interface TalkToUdForumProps {
   onBackToMatch?: () => void;
@@ -35,7 +36,7 @@ export const TalkToUdForum: React.FC<TalkToUdForumProps> = ({ onBackToMatch }) =
       });
     }, 7000);
 
-    // Error listener for third-party script blocks
+    // Error listener for third-party script blocks or color parsing failures
     const handleScriptError = (event: ErrorEvent) => {
       if (
         event.filename &&
@@ -153,6 +154,7 @@ export const TalkToUdForum: React.FC<TalkToUdForumProps> = ({ onBackToMatch }) =
       <div
         ref={containerRef}
         className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-8 shadow-2xl overflow-hidden min-h-[480px] relative"
+        style={{ backgroundColor: '#0f172a', color: '#f8fafc' }}
       >
         <div className="border-b border-slate-800 pb-4 mb-6 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -230,17 +232,24 @@ export const TalkToUdForum: React.FC<TalkToUdForumProps> = ({ onBackToMatch }) =
           </div>
         )}
 
-        {/* Embedded Disqus Forum */}
+        {/* Embedded Disqus Forum with Error Isolation & explicit sRGB styling */}
         <div
-          className={`disqus-container bg-slate-950/50 rounded-2xl p-4 sm:p-6 border border-white/5 transition-opacity duration-300 ${
+          className={`disqus-container rounded-2xl p-4 sm:p-6 border border-white/5 transition-opacity duration-300 ${
             loadStatus === 'loading' ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'
           }`}
+          style={{ backgroundColor: '#0b1120', color: '#f8fafc' }}
         >
-          <DiscussionEmbed
-            key={`disqus-embed-${retryCount}`}
-            shortname={disqusShortname}
-            config={disqusConfig}
-          />
+          <DisqusErrorBoundary
+            canonicalUrl={canonicalUrl}
+            disqusShortname={disqusShortname}
+            onRetry={handleRetry}
+          >
+            <DiscussionEmbed
+              key={`disqus-embed-${retryCount}`}
+              shortname={disqusShortname}
+              config={disqusConfig}
+            />
+          </DisqusErrorBoundary>
         </div>
       </div>
 
