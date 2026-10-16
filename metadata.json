@@ -1,0 +1,10 @@
+{
+  "name": "PokéLook",
+  "description": "Discover which Pokémon you look like based on your hairstyle, expression, colors, and visual styling.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
