@@ -13,9 +13,11 @@ import { HowItWorks } from './components/HowItWorks';
 import { PrivacySection } from './components/PrivacySection';
 import { Attribution } from './components/Attribution';
 import { ErrorModal } from './components/ErrorModal';
+import { TalkToUdForum } from './components/TalkToUdForum';
 import { matchPokemon, fetchPokemonInfo, PokemonMatchResult, PokemonApiData } from './services/api';
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState<'match' | 'talk-to-ud'>('match');
   const [currentImage, setCurrentImage] = useState<string | null>(null);
   const [currentMimeType, setCurrentMimeType] = useState<string>('image/jpeg');
   const [isLoading, setIsLoading] = useState(false);
@@ -83,20 +85,28 @@ export default function App() {
     setPokemonData(null);
     setErrorMessage(null);
     setIsLoading(false);
+    setActiveTab('match');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-red-600 selection:text-white">
-      {/* 3-Zone Top Navigation */}
+      {/* 3-Zone Top Navigation with Talk to UD Tab */}
       <Header
         onReset={handleReset}
         showReset={Boolean(matchResult || currentImage)}
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
       />
 
       {/* Main App Content */}
       <main className="flex-1 flex flex-col justify-start">
-        {isLoading ? (
+        {activeTab === 'talk-to-ud' ? (
+          <TalkToUdForum onBackToMatch={() => setActiveTab('match')} />
+        ) : isLoading ? (
           <div className="my-auto py-12">
             <LoadingState />
           </div>
