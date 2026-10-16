@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import matchHandler from './api/match.js';
 import pokemonHandler from './api/pokemon.js';
+import healthHandler from './api/health.js';
 
 dotenv.config();
 
@@ -41,11 +42,14 @@ async function startServer() {
   });
 
   // Health check endpoint
-  app.get('/api/health', (req, res) => {
-    res.json({
-      status: 'ok',
-      hasGeminiKey: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY')
-    });
+  app.all('/api/health', async (req, res) => {
+    try {
+      await healthHandler(req, res);
+    } catch (err) {
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Internal server error during health check.' });
+      }
+    }
   });
 
   if (process.env.NODE_ENV === 'production') {

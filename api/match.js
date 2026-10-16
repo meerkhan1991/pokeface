@@ -1,8 +1,8 @@
 /**
  * Vercel Serverless Function & Express Route Handler
  * Endpoint: POST /api/match
+ * Uses Google Gemini REST API v1beta
  */
-import { GoogleGenAI, Type } from '@google/genai';
 import { POKEMON_CATALOG, POKEMON_MAP, POKEMON_DISPLAY_MAP } from './pokemonCatalog.js';
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -20,6 +20,9 @@ export default async function handler(req, res) {
   if (!apiKey || apiKey.trim() === '' || apiKey === 'MY_GEMINI_API_KEY') {
     return res.status(503).json({ error: 'key not configured' });
   }
+
+  const rawModel = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+  const modelId = rawModel.replace(/^models\//, '').trim();
 
   try {
     const { image, mimeType } = req.body || {};
@@ -58,100 +61,122 @@ export default async function handler(req, res) {
       (p) => `${p.displayName} (Colors: ${p.palette.join(', ')} | Style: ${p.visualVibe})`
     ).join('\n');
 
-    const ai = new GoogleGenAI({
-      apiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build'
-        }
-      }
-    });
-
-    const systemInstruction = `You are PokéLook, an AI entertainment matching engine for a playful Pokémon lookalike application.
-Your goal is to suggest a fun Pokémon lookalike from a STRICT allowlist based SOLELY on observable, non-sensitive visual elements:
-- Visible facial expression (e.g., cheerful grin, peaceful closed-eye smile, comic bewildered look, confident smirk, calm gaze)
-- Hairstyle/texture/silhouette (e.g., spiky, curly, sleek bob, pompadour, voluminous, braids, wavy)
-- Dominant colors in clothing, hair, or visible background (e.g., yellow, blue, orange, lavender, earthy tones, pink, dark navy)
+    const systemInstruction = `You are PokéLook, an entertainment matching engine that pairs a photo with a fun Pokémon lookalike.
+Analyze ONLY observable, non-sensitive styling cues:
+- Facial expression (e.g., cheerful grin, peaceful closed-eye smile, comic bewildered look, confident smirk, calm gaze)
+- Hairstyle/texture/silhouette (e.g., spiky, curly, sleek bob, pompadour, voluminous waves, braids)
+- Clothing colours and dominant background tones (e.g., yellow, blue, orange, lavender, earthy tones, pink, dark navy)
 - Observable accessories (e.g., glasses, caps, headbands, scarves, necklaces, bowties)
 - Overall visual styling and aesthetic energy (e.g., sporty, cozy, vibrant, elegant, chill, playful)
 
 CRITICAL ETHICAL RULES AND GUARDRAILS:
 1. DO NOT identify the person in the photograph.
-2. DO NOT use face recognition or compare the image with real people's identities.
+2. DO NOT use face recognition or compare with real people's identities.
 3. DO NOT infer race, ethnicity, nationality, gender identity, age, health conditions, or personality traits.
 4. DO NOT assess or rate attractiveness, beauty, body weight, or body shape.
 5. DO NOT invent Pokémon names. You MUST select strictly from the 36 Pokémon provided in the allowlist.
-6. Treat all matches as playful, whimsical interpretations rather than facial measurements.
+6. Return output strictly in valid JSON format matching this schema:
+{
+  "bestMatch": "Pikachu",
+  "alternativeMatches": ["Charmander", "Jolteon"],
+  "visualReasons": ["Visual reason 1", "Visual reason 2", "Visual reason 3"],
+  "explanation": "Brief 1-2 sentence playful explanation."
+}
 
 AVAILABLE POKÉMON ALLOWLIST (Choose ONLY from this list):
 ${catalogSummary}
 `;
 
-    const promptText = `Examine this photo's observable, non-sensitive styling cues (facial expression, hairstyle/hair volume, dominant clothing/background colors, accessories, and overall styling).
+    const promptText = `Examine this photo's observable, non-sensitive styling cues (facial expression, hairstyle/hair volume, clothing/background colors, accessories, and overall styling).
 Select:
 1. The single best Pokémon match from the allowlist.
 2. Two distinct alternative Pokémon matches from the allowlist.
-3. Exactly three clear, playful visual reasons explaining the match (focused strictly on observable visual features like expression, colors, hair/headwear, or styling).
+3. Exactly three clear, playful visual reasons explaining the match.
 4. A short, friendly 1-2 sentence explanation.
 
 Valid Pokémon names to choose from:
 ${allowedNames.join(', ')}`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              inlineData: {
-                mimeType: detectedMime.toLowerCase(),
-                data: rawBase64
-              }
-            },
-            {
-              text: promptText
-            }
-          ]
-        }
-      ],
-      config: {
-        systemInstruction,
-        temperature: 0.4,
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            bestMatch: {
-              type: Type.STRING,
-              description: 'Exact name of the best matching Pokémon from the allowlist'
-            },
-            alternativeMatches: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: 'Two distinct alternative Pokémon names from the allowlist'
-            },
-            visualReasons: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: 'Exactly 3 observable visual reasons for the match'
-            },
-            explanation: {
-              type: Type.STRING,
-              description: 'A brief, cheerful 1-2 sentence explanation'
-            }
-          },
-          required: ['bestMatch', 'alternativeMatches', 'visualReasons', 'explanation']
-        }
-      }
-    });
+    // 15-second request timeout for Gemini REST API call
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    const rawText = response.text?.trim() || '{}';
+    const callGeminiRest = async (modelToUse) => {
+      const restUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelToUse)}:generateContent`;
+      return fetch(restUrl, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+          'User-Agent': 'aistudio-build'
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                {
+                  inlineData: {
+                    mimeType: detectedMime.toLowerCase(),
+                    data: rawBase64
+                  }
+                },
+                {
+                  text: promptText
+                }
+              ]
+            }
+          ],
+          systemInstruction: {
+            parts: [{ text: systemInstruction }]
+          },
+          generationConfig: {
+            temperature: 0.4,
+            responseMimeType: 'application/json'
+          }
+        })
+      });
+    };
+
+    let geminiResponse;
+    try {
+      geminiResponse = await callGeminiRest(modelId);
+
+      // If high demand spike (503), attempt a fast fallback retry with verified lite vision model
+      if (geminiResponse.status === 503 && modelId !== 'gemini-3.1-flash-lite-preview') {
+        geminiResponse = await callGeminiRest('gemini-3.1-flash-lite-preview');
+      }
+    } catch (fetchErr) {
+      clearTimeout(timeoutId);
+      if (fetchErr.name === 'AbortError') {
+        return res.status(504).json({ error: 'AI analysis timed out (exceeded 15 seconds).' });
+      }
+      return res.status(502).json({ error: 'AI service unavailable. Please check your network connection.' });
+    }
+
+    clearTimeout(timeoutId);
+
+    if (!geminiResponse.ok) {
+      if (geminiResponse.status === 429) {
+        return res.status(429).json({ error: 'AI rate limit exceeded. Please wait a moment and try again.' });
+      }
+      if (geminiResponse.status === 503) {
+        return res.status(503).json({ error: 'AI service is currently experiencing high demand. Please try again shortly.' });
+      }
+      return res.status(502).json({ error: 'AI service returned an unexpected status code.' });
+    }
+
+    const responseJson = await geminiResponse.json();
+    const candidateText = responseJson.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '{}';
+
     let result;
     try {
-      result = JSON.parse(rawText);
+      // Clean possible markdown code fences if present
+      const cleanJsonStr = candidateText.replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
+      result = JSON.parse(cleanJsonStr);
     } catch {
-      return res.status(502).json({ error: 'AI visual analysis produced invalid structure.' });
+      return res.status(502).json({ error: 'AI visual analysis produced an invalid response format.' });
     }
 
     // Helper to validate and look up against predefined catalog
@@ -228,10 +253,8 @@ ${allowedNames.join(', ')}`;
     });
   } catch (error) {
     // Never leak image data or raw error traces with sensitive payloads
-    const message = error?.message || 'AI service unavailable';
     return res.status(502).json({
-      error: 'AI service unavailable. Please check your network or try again in a moment.',
-      details: message.includes('API_KEY') ? 'Authentication issue' : 'Analysis processing issue'
+      error: 'AI service unavailable. Please check your network or try again in a moment.'
     });
   }
 }
